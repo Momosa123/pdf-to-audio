@@ -1,75 +1,75 @@
-# Plan de développement de l'application TTS sur PDF
+# 🛠️ Plan de développement de l'application TTS sur PDF (Version corrigée)
 
-## 1. Prototype simple en Frontend seulement : TTS sur texte brut
+## 1. Prototype simple en Frontend : TTS sur texte brut
 
-**Objectif :** Créer une petite PWA qui prend un texte court (écrit ou copié-collé) et le lit à voix haute dans le navigateur.
-
-**À faire :**
-
-- [x] Créer une app React (Next JS)
-- [ ] Interface minimale :
-  - [ ] Un textarea pour entrer du texte
-  - [ ] Un bouton "Lire à voix haute"
-- [ ] Utiliser l'API native SpeechSynthesis du navigateur au départ (parfait pour les démos rapides)
-- [ ] Ajouter PWA support (manifest.json, service worker)
-
-✅ À ce stade, pas besoin de backend.
-
-## 2. Ajout du TTS avancé avec transformers.js
-
-**Objectif :** Remplacer ou compléter l'API native par un modèle plus naturel avec transformers.js.
+**Objectif :** Créer une application qui prend un texte court et le lit à voix haute dans le navigateur.
 
 **À faire :**
 
-- [ ] Utiliser transformers.js pour charger un modèle TTS léger dans le navigateur (ex : FastSpeech2 ou un équivalent petit modèle)
-- [ ] Générer l'audio blob et jouer via AudioContext
-- [ ] Ajouter fallback : utiliser SpeechSynthesis si device trop faible
+- [x] Créer une app React (Next.js 15, TypeScript)
+- [x] Interface minimale :
+  - [x] Textarea pour entrer du texte
+  - [x] Bouton "Lire à voix haute"
+- [x] Utiliser l'API native `SpeechSynthesis` pour la lecture
 
-⚠️ **Attention :** Vérifier le temps de chargement ➔ précharger le modèle au démarrage si possible.
+✅ À ce stade, **pas besoin de backend**.
 
-## 3. Gestion d'un petit PDF (5–10 pages)
+---
 
-**Objectif :** Permettre d'uploader un PDF, d'extraire le texte, et de lire ce texte à voix haute page par page.
+## 2. Gestion de petits fichiers PDF (5–10 pages)
+
+**Objectif :** Permettre d'uploader un PDF, d'extraire son texte, et de lire ce texte à voix haute page par page.
 
 **À faire :**
 
-- [ ] Upload d'un fichier PDF avec pdf.js (lib très robuste pour lire des PDF en frontend)
-- [ ] Extraction du texte par page
-- [ ] Affichage page par page + bouton "Lire cette page"
+- [ ] Upload d'un fichier PDF (`pdf.js` en frontend)
+- [ ] Extraction du texte **page par page**
+- [ ] Affichage page par page avec navigation
+- [ ] Bouton "Lire cette page" pour lire le texte extrait
+- [ ] Lecture avec `SpeechSynthesis`
 
 ✅ Toujours sans backend pour l'instant.
 
-## 4. Passage à des fichiers PDF lourds (livres)
+---
 
-**Objectif :** Gérer de très gros fichiers PDF (livres > 50 pages), de façon fluide.
+## 3. Passage à de gros fichiers PDF (livres > 50 pages)
+
+**Objectif :** Gérer des fichiers PDF volumineux sans faire planter le navigateur.
 
 **Limites identifiées :**
 
-- [ ] Extraction d'un énorme fichier tout d'un coup peut faire planter le navigateur (mémoire / CPU)
-- [ ] Modèle TTS en JS est trop lourd pour traiter tout le livre en une fois
+- Extraction d'un énorme fichier d'un coup = risque de plantage (mémoire/CPU)
+- Lecture complète du texte trop lourde pour `SpeechSynthesis` sans découpage
 
 **Solutions :**
 
-- [ ] Découper le PDF en morceaux (ex: 10 pages maximum à la fois)
+- [ ] Découper le PDF en morceaux (ex: 10 pages max à la fois)
 - [ ] Proposer à l'utilisateur de choisir les pages à lire
-- [ ] Lecture par "chunk" de texte (ex: 500–1000 mots max par audio)
-- [ ] Charger le texte au fur et à mesure (lazy loading)
+- [ ] Lecture par "chunks" de texte (500–1000 mots max)
+- [ ] Chargement progressif du texte (lazy loading)
 
-## 5. Création d'un Backend TTS
+---
 
-**Objectif :** Déporter le traitement lourd (modèle TTS) côté serveur pour mieux gérer les longs textes et accélérer.
+## 4. Création d'un Backend TTS (FastAPI)
+
+**Objectif :** Utiliser un modèle TTS lourd pour lire des textes plus longs de manière naturelle.
 
 **Backend à construire :**
 
-- [ ] API REST avec FastAPI ou Flask :
-  - [ ] POST /generate-audio avec du texte ➔ réponse : fichier audio (mp3 ou wav)
-- [ ] Utiliser un vrai modèle TTS server-side :
-  - [ ] Par exemple : Tortoise TTS, Coqui TTS, ou un modèle Hugging Face plus lourd
-- [ ] Stocker temporairement les fichiers audio pour les envoyer au frontend
+- [ ] API REST (FastAPI)
+  - [ ] Endpoint `POST /generate-audio` recevant du texte ➔ renvoyant un fichier audio (MP3/WAV)
+- [ ] Modèles TTS backend :
+  - [ ] Tortoise TTS, Coqui TTS, Bark ou OpenVoice
+- [ ] Stockage temporaire des fichiers audio (par exemple S3, disque local)
 
-## 6. Améliorations futures
+---
 
-- [ ] Sélection de la voix (homme / femme / accent)
-- [ ] Possibilité de télécharger l'audio du PDF entier
+## 5. Améliorations futures
+
+**Idées d'améliorations :**
+
+- [ ] Sélection de la voix (homme / femme / accents)
+- [ ] Téléchargement de l'audio complet du PDF
 - [ ] Ajout de marque-pages dans la lecture
-- [ ] Résumer automatiquement le PDF avant de lire (avec un modèle de résumé)
+- [ ] Résumer automatiquement le PDF avant de lire (modèle de résumé)
+- [ ] Support PWA complet (manifest.json, service worker pour usage offline)
