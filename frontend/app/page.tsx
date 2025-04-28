@@ -32,7 +32,9 @@ export default function Home() {
           onChange={(e) => setVoice(e.target.value)}
         >
           {voices.map((voice) => (
-            <option value={voice.name}>{voice.name}</option>
+            <option key={voice.name} value={voice.name}>
+              {voice.name}
+            </option>
           ))}
         </select>
         <Textarea
