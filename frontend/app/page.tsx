@@ -1,60 +1,50 @@
 "use client";
 
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import UploadInput from "@/components/UploadInput";
+import PDFPreview from "@/components/PDFPreview";
 
 export default function Home() {
-  const [text, setText] = useState("");
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [selectedVoiceName, setSelectedVoiceName] = useState<string>("");
+  const [isUploading, setIsUploading] = useState(false);
 
-  useEffect(() => {
-    const synth = window.speechSynthesis;
-    if (!synth) {
-      console.warn("Speech Synthesis not supported by this browser.");
-      return;
-    }
+  // Ajout pour la prévisualisation PDF
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
-    const loadVoices = () => {
-      const availableVoices = synth.getVoices();
-      setVoices(availableVoices);
-      if (availableVoices.length > 0 && !selectedVoiceName) {
-        const defaultVoice =
-          availableVoices.find((v) => v.lang.startsWith("fr")) ||
-          availableVoices[0];
-        if (defaultVoice) {
-          setSelectedVoiceName(defaultVoice.name);
+  const handleCancel = () => {
+    setShowPreview(false);
+    setSelectedFile(null);
+  };
+
+  const handleConfirm = async () => {
+    setShowPreview(false);
+    if (selectedFile) {
+      setIsUploading(true);
+
+      try {
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+
+        const response = await fetch("http://localhost:8000/api/upload-pdf", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error("Erreur lors de l'upload du PDF");
         }
+
+        const metadata = await response.json();
+        console.log("PDF uploadé avec succès:", metadata);
+      } catch (error) {
+        console.error("Erreur:", error);
+        alert("Erreur lors de l'upload du PDF. Veuillez réessayer.");
+      } finally {
+        setIsUploading(false);
+        setSelectedFile(null);
       }
-    };
-
-    loadVoices();
-
-    synth.onvoiceschanged = loadVoices;
-
-    return () => {
-      synth.onvoiceschanged = null;
-      synth.cancel();
-    };
-  }, [selectedVoiceName]);
-
-  const handleClick = () => {
-    const synth = window.speechSynthesis;
-    if (!text.trim() || !synth) return;
-
-    synth.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(text);
-
-    const voice = voices.find((v) => v.name === selectedVoiceName);
-    if (voice) {
-      utterance.voice = voice;
-    } else {
-      console.warn(`Voice "${selectedVoiceName}" not found. Using default.`);
     }
-
-    synth.speak(utterance);
   };
 
   return (
@@ -64,39 +54,35 @@ export default function Home() {
       </h1>
 
       <div className="flex w-full max-w-xl flex-col items-center justify-center gap-4">
-        {voices.length > 0 ? (
-          <select
-            className="border-2 border-gray-300 rounded-md p-2 w-full"
-            name="voiceSelect"
-            id="voiceSelect"
-            value={selectedVoiceName}
-            onChange={(e) => setSelectedVoiceName(e.target.value)}
-            aria-label="Select voice"
-          >
-            {voices.map((voice) => (
-              <option key={voice.name} value={voice.name}>
-                {voice.name} ({voice.lang})
-              </option>
-            ))}
-          </select>
-        ) : (
-          <p>Chargement des voix...</p>
-        )}
-        <Textarea
-          className="w-full h-48"
-          placeholder="Entrez votre texte ici..."
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          aria-label="Text input for speech"
+        <UploadInput
+          onFileChange={(file) => {
+            setSelectedFile(file);
+            setShowPreview(true);
+          }}
         />
-        <Button
-          className="bg-blue-500 text-white cursor-pointer px-6 py-2 rounded-md"
-          aria-label="Lire à voix haute"
-          disabled={!text.trim() || voices.length === 0}
-          onClick={handleClick}
-        >
-          Lire à voix haute
-        </Button>
+
+        {/* Modale de prévisualisation et boutons Annuler/Confirmer */}
+        {selectedFile && (
+          <>
+            <PDFPreview
+              file={selectedFile}
+              isOpen={showPreview}
+              onClose={handleCancel}
+            />
+            {showPreview && (
+              <div className="flex justify-center gap-4 mt-4">
+                <Button variant="outline" onClick={handleCancel}>
+                  Annuler
+                </Button>
+                <Button onClick={handleConfirm}>
+                  Confirmer et générer l&apos;audio
+                </Button>
+              </div>
+            )}
+          </>
+        )}
+
+        {isUploading && <p>Upload en cours...</p>}
       </div>
     </div>
   );
