@@ -1,44 +1,48 @@
-import { Upload } from "lucide-react";
 import React, { useRef } from "react";
 
-const UploadInput = ({
-  onFileChange,
-}: {
-  onFileChange: (file: File) => void;
-}) => {
+interface UploadInputProps {
+  files: File[];
+  onFilesChange?: (files: File[]) => void;
+}
+
+export default function UploadInput({
+  files,
+  onFilesChange,
+}: UploadInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const newFiles = Array.from(e.target.files);
+    const allFiles = [...files, ...newFiles];
+    const uniqueFiles = Array.from(
+      new Map(allFiles.map((f) => [f.name + f.size, f])).values()
+    );
+    onFilesChange?.(uniqueFiles);
+    e.target.value = "";
+  };
+
+  const handleClick = () => {
+    inputRef.current?.click();
+  };
+
   return (
-    <div className="w-full">
-      <label
-        htmlFor="pdf-upload"
-        className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors"
+    <div className="space-y-4">
+      <button
+        type="button"
+        onClick={handleClick}
+        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
       >
-        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-          <Upload className="w-8 h-8 mb-3 text-gray-500" />
-          <p className="mb-2 text-sm text-gray-500">
-            <span className="font-semibold">Cliquez pour télécharger</span> ou
-            glissez-déposez
-          </p>
-          <p className="text-xs text-gray-500">PDF uniquement</p>
-        </div>
-        <input
-          ref={inputRef}
-          id="pdf-upload"
-          type="file"
-          accept=".pdf"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) {
-              onFileChange(file);
-              if (inputRef.current) inputRef.current.value = "";
-            }
-          }}
-          className="hidden"
-        />
-      </label>
+        Sélectionner des fichiers PDF
+      </button>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="application/pdf"
+        multiple
+        onChange={handleFileChange}
+        className="hidden"
+      />
     </div>
   );
-};
-
-export default UploadInput;
+}
