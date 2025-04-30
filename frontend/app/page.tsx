@@ -1,89 +1,88 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import UploadInput from "@/components/UploadInput";
-import PDFPreview from "@/components/PDFPreview";
+import PDFThumbnailCard from "@/components/PDFThumbnailCard";
+import { pdfjs } from "react-pdf";
+
+// Configure le worker pour react-pdf
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  "pdfjs-dist/build/pdf.worker.min.mjs",
+  import.meta.url
+).toString();
 
 export default function Home() {
   const [isUploading, setIsUploading] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
-  // Ajout pour la prévisualisation PDF
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
-
-  const handleCancel = () => {
-    setShowPreview(false);
-    setSelectedFile(null);
+  // Prend le fichier à annuler en argument
+  const handleCancel = (fileToRemove: File) => {
+    setSelectedFiles((prev) => prev.filter((f) => f !== fileToRemove));
   };
 
-  const handleConfirm = async () => {
-    setShowPreview(false);
-    if (selectedFile) {
-      setIsUploading(true);
-
-      try {
-        const formData = new FormData();
-        formData.append("file", selectedFile);
-
-        const response = await fetch("http://localhost:8000/api/upload-pdf", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!response.ok) {
-          throw new Error("Erreur lors de l'upload du PDF");
-        }
-
-        const metadata = await response.json();
-        console.log("PDF uploadé avec succès:", metadata);
-      } catch (error) {
-        console.error("Erreur:", error);
-        alert("Erreur lors de l'upload du PDF. Veuillez réessayer.");
-      } finally {
-        setIsUploading(false);
-        setSelectedFile(null);
+  // Prend le fichier à confirmer/uploader en argument
+  const handleConfirm = async (fileToUpload: File) => {
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", fileToUpload);
+      const response = await fetch("http://localhost:8000/api/upload-pdf", {
+        method: "POST",
+        body: formData,
+      });
+      if (!response.ok) {
+        throw new Error(`Erreur lors de l'upload de ${fileToUpload.name}`);
       }
+      const metadata = await response.json();
+      console.log(`PDF ${fileToUpload.name} uploadé avec succès:`, metadata);
+      // Optionnel : Retire le fichier de la liste après succès
+      handleCancel(fileToUpload);
+    } catch (error) {
+      console.error("Erreur:", error);
+      alert(
+        `Erreur lors de l'upload de ${fileToUpload.name}. Veuillez réessayer.`
+      );
+    } finally {
+      setIsUploading(false);
+      // On ne reset plus selectedFile ici
     }
   };
 
   return (
-    <div className="flex pt-16 gap-16 flex-col items-center justify-start min-h-screen px-4">
+    <div className="flex pt-16 gap-8 flex-col items-center justify-start min-h-screen px-4">
       <h1 className="text-4xl font-bold text-center">
         Entrez votre texte, il sera lu à voix haute
       </h1>
-
       <div className="flex w-full max-w-xl flex-col items-center justify-center gap-4">
         <UploadInput
-          onFileChange={(file) => {
-            setSelectedFile(file);
-            setShowPreview(true);
+          files={selectedFiles}
+          onFilesChange={(files) => {
+            setSelectedFiles(files); // Met à jour la liste complète
           }}
         />
-
-        {/* Modale de prévisualisation et boutons Annuler/Confirmer */}
-        {selectedFile && (
-          <>
-            <PDFPreview
-              file={selectedFile}
-              isOpen={showPreview}
-              onClose={handleCancel}
-            />
-            {showPreview && (
-              <div className="flex justify-center gap-4 mt-4">
-                <Button variant="outline" onClick={handleCancel}>
-                  Annuler
-                </Button>
-                <Button onClick={handleConfirm}>
-                  Confirmer et générer l&apos;audio
-                </Button>
-              </div>
-            )}
-          </>
-        )}
-
-        {isUploading && <p>Upload en cours...</p>}
       </div>
+
+      {/* Section pour afficher les miniatures */}
+      {selectedFiles.length > 0 && (
+        <div className="w-full max-w-4xl grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {selectedFiles.map((file) => (
+            <PDFThumbnailCard
+              key={file.name + file.size} // Clé unique pour chaque carte
+              file={file}
+              // Passe des fonctions qui appellent les handlers avec le bon fichier
+              onConfirm={() => handleConfirm(file)}
+              onCancel={() => handleCancel(file)}
+              onThumbnailClick={() =>
+                alert(`Agrandir ${file.name} (à implémenter)`)
+              }
+              // Désactive les boutons si *une* upload est en cours
+              isUploading={isUploading}
+            />
+          ))}
+        </div>
+      )}
+
+      {isUploading && <p>Upload en cours...</p>}
     </div>
   );
 }
