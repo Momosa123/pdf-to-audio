@@ -3,6 +3,7 @@
 import { useState } from "react";
 import UploadInput from "@/components/UploadInput";
 import PDFThumbnailCard from "@/components/PDFThumbnailCard";
+import PDFPreview from "@/components/PDFPreview";
 import { pdfjs } from "react-pdf";
 
 // Configure le worker pour react-pdf
@@ -14,6 +15,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 export default function Home() {
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previewFile, setPreviewFile] = useState<File | null>(null);
 
   // Prend le fichier à annuler en argument
   const handleCancel = (fileToRemove: File) => {
@@ -48,6 +50,16 @@ export default function Home() {
     }
   };
 
+  // Fonction pour ouvrir la prévisualisation
+  const handleThumbnailClick = (file: File) => {
+    setPreviewFile(file);
+  };
+
+  // Fonction pour fermer la prévisualisation
+  const handleClosePreview = () => {
+    setPreviewFile(null);
+  };
+
   return (
     <div className="flex pt-16 gap-8 flex-col items-center justify-start min-h-screen px-4">
       <h1 className="text-4xl font-bold text-center">
@@ -72,14 +84,21 @@ export default function Home() {
               // Passe des fonctions qui appellent les handlers avec le bon fichier
               onConfirm={() => handleConfirm(file)}
               onCancel={() => handleCancel(file)}
-              onThumbnailClick={() =>
-                alert(`Agrandir ${file.name} (à implémenter)`)
-              }
+              onThumbnailClick={() => handleThumbnailClick(file)}
               // Désactive les boutons si *une* upload est en cours
               isUploading={isUploading}
             />
           ))}
         </div>
+      )}
+
+      {/* Prévisualisation du PDF */}
+      {previewFile && (
+        <PDFPreview
+          file={previewFile}
+          isOpen={!!previewFile}
+          onClose={handleClosePreview}
+        />
       )}
 
       {isUploading && <p>Upload en cours...</p>}
