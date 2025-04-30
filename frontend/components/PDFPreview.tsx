@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/dialog";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useState } from "react";
-import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight, X } from "lucide-react";
 
 // Configuration de pdfjs worker
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
@@ -74,6 +74,13 @@ const PDFPreview = ({ file, isOpen, onClose }: PDFPreviewProps) => {
             Page {pageNumber} / {numPages}
           </div>
         </div>
+        <button
+          onClick={onClose}
+          className="absolute cursor-pointer top-2 right-2 p-2 rounded-full bg-white text-gray-700 shadow-sm hover:bg-gray-100 focus:ring-2 focus:ring-blue-400"
+          aria-label="Fermer"
+        >
+          <X className="w-6 h-6" />
+        </button>
       </DialogContent>
     </Dialog>
   );

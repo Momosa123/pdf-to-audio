@@ -33,7 +33,7 @@ const PDFThumbnailCard = ({
           disabled={isUploading}
           aria-label="Supprimer"
         >
-          <X className="w-4 h-4 text-gray-600" />
+          <X className="cursor-pointer w-4 h-4 text-gray-600" />
         </button>
         <div
           className="w-full h-full cursor-pointer hover:opacity-80 transition-opacity"
@@ -74,7 +74,7 @@ const PDFThumbnailCard = ({
       {/* Bouton de confirmation */}
       <Button
         size="sm"
-        className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1"
+        className="bg-blue-600 cursor-pointer hover:bg-blue-700 text-white flex items-center gap-1"
         onClick={onConfirm}
         disabled={isUploading}
       >
