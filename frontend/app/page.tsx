@@ -28,7 +28,7 @@ export default function Home() {
     try {
       const formData = new FormData();
       formData.append("file", fileToUpload);
-      const response = await fetch("http://localhost:8000/api/upload-pdf", {
+      const response = await fetch("http://127.0.0.1:8000/api/pdf-to-audio", {
         method: "POST",
         body: formData,
       });
