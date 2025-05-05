@@ -3,11 +3,12 @@ import { Document, Page } from "react-pdf";
 import { Button } from "@/components/ui/button";
 import { X, Check, Loader2, Eye } from "lucide-react";
 
-// Assure-toi que le worker est configuré (peut-être dans un fichier global ou layout)
-// pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`; // Ou selon ta config
+// Ensure the worker is configured (maybe in a global or layout file)
+// pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`; // Or according to your config
 
 interface PDFThumbnailCardProps {
   file: File;
+  audioUrl: string | null;
   onConfirm: () => void;
   onCancel: () => void;
   onThumbnailClick: () => void;
@@ -16,12 +17,14 @@ interface PDFThumbnailCardProps {
 
 const PDFThumbnailCard = ({
   file,
+  audioUrl,
   onConfirm,
   onCancel,
   onThumbnailClick,
   isUploading,
 }: PDFThumbnailCardProps) => {
   const [thumbLoading, setThumbLoading] = React.useState(true);
+  const [showPlayer, setShowPlayer] = React.useState(false);
 
   return (
     <div className="w-full p-4 bg-white border border-gray-200 rounded-lg shadow-md flex flex-col items-center gap-4">
@@ -36,9 +39,11 @@ const PDFThumbnailCard = ({
           <X className="cursor-pointer w-4 h-4 text-gray-600" />
         </button>
         <div
-          className="w-full h-full cursor-pointer hover:opacity-80 transition-opacity"
-          onClick={onThumbnailClick}
-          title="Cliquez pour agrandir"
+          className={`w-full h-full ${
+            audioUrl ? "" : "cursor-pointer hover:opacity-80 transition-opacity"
+          }`}
+          onClick={audioUrl ? undefined : onThumbnailClick}
+          title={audioUrl ? undefined : "Cliquez pour agrandir"}
         >
           {thumbLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
@@ -66,25 +71,39 @@ const PDFThumbnailCard = ({
         </div>
       </div>
 
-      {/* Nom du fichier */}
+      {/* File name */}
       <p className="text-sm font-medium text-gray-700 truncate w-full text-center">
         {file.name}
       </p>
 
-      {/* Bouton de confirmation */}
-      <Button
-        size="sm"
-        className="bg-blue-600 cursor-pointer hover:bg-blue-700 text-white flex items-center gap-1"
-        onClick={onConfirm}
-        disabled={isUploading}
-      >
-        {isUploading ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
+      {/* Audio player or generation/listen button */}
+      {audioUrl ? (
+        showPlayer ? (
+          <audio src={audioUrl} controls autoPlay className="w-36" />
         ) : (
-          <Check className="w-4 h-4" />
-        )}
-        {isUploading ? "Génération..." : "Générer l'audio"}
-      </Button>
+          <Button
+            size="sm"
+            className="bg-green-600 cursor-pointer hover:bg-green-700 text-white flex items-center gap-1"
+            onClick={() => setShowPlayer(true)}
+          >
+            ▶️ Listen
+          </Button>
+        )
+      ) : (
+        <Button
+          size="sm"
+          className="bg-blue-600 cursor-pointer hover:bg-blue-700 text-white flex items-center gap-1"
+          onClick={onConfirm}
+          disabled={isUploading}
+        >
+          {isUploading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Check className="w-4 h-4" />
+          )}
+          {isUploading ? "Generating..." : "Generate audio"}
+        </Button>
+      )}
     </div>
   );
 };

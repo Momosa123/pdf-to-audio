@@ -33,7 +33,7 @@ export default function UploadInput({
         onClick={handleClick}
         className="px-4 py-2 cursor-pointer bg-blue-600 text-white rounded hover:bg-blue-700"
       >
-        Sélectionner des fichiers PDF
+        Select PDF files
       </button>
       <input
         ref={inputRef}

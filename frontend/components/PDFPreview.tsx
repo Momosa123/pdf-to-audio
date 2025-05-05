@@ -31,7 +31,7 @@ const PDFPreview = ({ file, isOpen, onClose }: PDFPreviewProps) => {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Prévisualisation du PDF</DialogTitle>
+          <DialogTitle>PDF Preview</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col items-center gap-4">
           <div className="flex items-center gap-2">
@@ -39,7 +39,7 @@ const PDFPreview = ({ file, isOpen, onClose }: PDFPreviewProps) => {
               onClick={goToPrevPage}
               disabled={pageNumber <= 1}
               className="p-2 rounded border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-100 focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
-              aria-label="Page précédente"
+              aria-label="Previous page"
             >
               <ChevronLeft className="cursor-pointer" />
             </button>
@@ -49,14 +49,10 @@ const PDFPreview = ({ file, isOpen, onClose }: PDFPreviewProps) => {
               loading={
                 <div className="flex flex-col items-center justify-center h-[70vh] w-[600px]">
                   <Loader2 className="h-8 w-8 animate-spin text-blue-500 mb-2" />
-                  <span>Chargement du PDF…</span>
+                  <span>Loading PDF…</span>
                 </div>
               }
-              error={
-                <div className="text-red-500 p-4">
-                  Erreur lors du chargement du PDF.
-                </div>
-              }
+              error={<div className="text-red-500 p-4">Error loading PDF.</div>}
               className="max-h-[70vh] overflow-auto"
             >
               <Page
@@ -65,7 +61,7 @@ const PDFPreview = ({ file, isOpen, onClose }: PDFPreviewProps) => {
                 loading={
                   <div className="flex flex-col items-center justify-center h-[70vh] w-[600px]">
                     <Loader2 className="h-8 w-8 animate-spin text-blue-500 mb-2" />
-                    <span>Chargement de la page…</span>
+                    <span>Loading page…</span>
                   </div>
                 }
                 renderTextLayer={false}
@@ -76,7 +72,7 @@ const PDFPreview = ({ file, isOpen, onClose }: PDFPreviewProps) => {
               onClick={goToNextPage}
               disabled={pageNumber >= numPages}
               className="p-2 rounded border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-100 focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
-              aria-label="Page suivante"
+              aria-label="Next page"
             >
               <ChevronRight className="cursor-pointer" />
             </button>
