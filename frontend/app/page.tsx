@@ -6,7 +6,7 @@ import PDFThumbnailCard from "@/components/PDFThumbnailCard";
 import PDFPreview from "@/components/PDFPreview";
 import { pdfjs } from "react-pdf";
 
-// Configure le worker pour react-pdf
+// configure the worker for react-pdf
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
   import.meta.url
@@ -16,29 +16,34 @@ export default function Home() {
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewFile, setPreviewFile] = useState<File | null>(null);
+  const [audioUrls, setAudioUrls] = useState<{ [filename: string]: string }>(
+    {}
+  );
 
-  // Prend le fichier à annuler en argument
+  // Takes the file to cancel as an argument
   const handleCancel = (fileToRemove: File) => {
     setSelectedFiles((prev) => prev.filter((f) => f !== fileToRemove));
   };
 
-  // Prend le fichier à confirmer/uploader en argument
+  // Takes the file to confirm/upload as an argument
   const handleConfirm = async (fileToUpload: File) => {
     setIsUploading(true);
     try {
       const formData = new FormData();
       formData.append("file", fileToUpload);
-      const response = await fetch("http://localhost:8000/api/upload-pdf", {
+      const response = await fetch("http://127.0.0.1:8000/api/pdf-to-audio", {
         method: "POST",
         body: formData,
       });
       if (!response.ok) {
         throw new Error(`Erreur lors de l'upload de ${fileToUpload.name}`);
       }
-      const metadata = await response.json();
-      console.log(`PDF ${fileToUpload.name} uploadé avec succès:`, metadata);
-      // Optionnel : Retire le fichier de la liste après succès
-      handleCancel(fileToUpload);
+      const audioBlob = await response.blob();
+      const url = URL.createObjectURL(audioBlob);
+      setAudioUrls((prev) => ({
+        ...prev,
+        [fileToUpload.name]: url,
+      }));
     } catch (error) {
       console.error("Erreur:", error);
       alert(
@@ -46,16 +51,15 @@ export default function Home() {
       );
     } finally {
       setIsUploading(false);
-      // On ne reset plus selectedFile ici
     }
   };
 
-  // Fonction pour ouvrir la prévisualisation
+  // Function to open the preview
   const handleThumbnailClick = (file: File) => {
     setPreviewFile(file);
   };
 
-  // Fonction pour fermer la prévisualisation
+  // Function to close the preview
   const handleClosePreview = () => {
     setPreviewFile(null);
   };
@@ -63,36 +67,35 @@ export default function Home() {
   return (
     <div className="flex pt-16 gap-8 flex-col items-center justify-start min-h-screen px-4">
       <h1 className="text-4xl font-bold text-center">
-        Entrez votre texte, il sera lu à voix haute
+        Upload a PDF file to get a voiceover
       </h1>
       <div className="flex w-full max-w-xl flex-col items-center justify-center gap-4">
         <UploadInput
           files={selectedFiles}
           onFilesChange={(files) => {
-            setSelectedFiles(files); // Met à jour la liste complète
+            setSelectedFiles(files); // Updates the complete list
           }}
         />
       </div>
 
-      {/* Section pour afficher les miniatures */}
+      {/* Section to display the thumbnails */}
       {selectedFiles.length > 0 && (
         <div className="w-full max-w-4xl grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {selectedFiles.map((file) => (
             <PDFThumbnailCard
-              key={file.name + file.size} // Clé unique pour chaque carte
+              key={file.name + file.size}
               file={file}
-              // Passe des fonctions qui appellent les handlers avec le bon fichier
+              audioUrl={audioUrls[file.name] || null}
               onConfirm={() => handleConfirm(file)}
               onCancel={() => handleCancel(file)}
               onThumbnailClick={() => handleThumbnailClick(file)}
-              // Désactive les boutons si *une* upload est en cours
               isUploading={isUploading}
             />
           ))}
         </div>
       )}
 
-      {/* Prévisualisation du PDF */}
+      {/* PDF preview */}
       {previewFile && (
         <PDFPreview
           file={previewFile}
@@ -101,7 +104,7 @@ export default function Home() {
         />
       )}
 
-      {isUploading && <p>Upload en cours...</p>}
+      {isUploading && <p>Uploading...</p>}
     </div>
   );
 }
