@@ -19,9 +19,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Monter le dossier static pour servir les fichiers audio
+# Mount the static folder to serve audio files
 app.mount("/app/static", StaticFiles(directory="app/static"), name="static")
-# Inclure les routes PDF
+# Include the PDF routes
 app.include_router(pdf_router.router)
 
 # Route de test
@@ -31,4 +31,4 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    uvicorn.run(app, host="0.0.0.0", port=8000)  # Run the app on port 8000

@@ -1,99 +1,74 @@
 from fastapi import APIRouter, File, UploadFile
-
-from fastapi.responses import JSONResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from app.services.extract_pdf import PDFService, chunk_text
 from app.services.tts_pdf import generate_audio_coqui
 import numpy as np
 import soundfile as sf
 import os
 import re
-import uuid # Importer uuid pour les noms de fichiers temporaires
+import uuid
+import io
 
 
-# Créer le routeur
+# Create the router
 router = APIRouter(prefix="/api", tags=["pdf"])
 
 def clean_text(text):
-    # Supprime SEULEMENT les espaces SIMPLES entre les lettres majuscules consécutives
-    # Note: on remplace \s+ par un espace simple ' ' dans la regex
+    # Removes ONLY SINGLE spaces between consecutive uppercase letters
+    # Note: we replace \s+ by a single space ' ' in the regex
     cleaned_text = re.sub(r'(?<=[A-Z]) (?=[A-Z])', '', text)
-    # Supprime les espaces multiples restants (qui pourraient être des séparateurs de mots)
-    # et les remplace par un seul espace standard.
+    # Removes remaining multiple spaces (which could be word separators)
+    # and replaces them with a standard single space.
     cleaned_text = re.sub(r'\s{2,}', ' ', cleaned_text)
-    print(f"Texte original : '{text}'")
-    print(f"Texte nettoyé  : '{cleaned_text.strip()}'")
+    print(f"Original text: '{text}'")
+    print(f"Cleaned text  : '{cleaned_text.strip()}'")
     return cleaned_text.strip()
 
 @router.post("/pdf-to-audio")
 async def pdf_to_audio(file: UploadFile = File(...)):
     """
-    Convertit les 5 premières pages d'un fichier PDF en audio.
+    Converts the first 5 pages of a PDF file to audio and returns the audio directly.
     """
-    # Lire le contenu du PDF uploadé
     contents = await file.read()
     pdf_service = PDFService()
-    # Utiliser la nouvelle méthode pour les 5 premières pages
     text = pdf_service.extract_first_five_pages_text(contents)
-    cleaned_text = clean_text(text)  # Nettoie le texte
+    cleaned_text = clean_text(text)
 
     if not cleaned_text:
-        return JSONResponse(content={"error": "Aucun texte trouvé dans les 5 premières pages du PDF."}, status_code=400)
-
-    # Créer le dossier audio s'il n'existe pas
-    base_dir = os.path.dirname(__file__)
-    audio_dir = os.path.join(base_dir, '..', 'static', 'audio')
-    temp_dir = os.path.join(audio_dir, 'temp') # Dossier pour les fichiers temporaires
-    os.makedirs(temp_dir, exist_ok=True)
+        return JSONResponse(content={"error": "No text found in the first 5 pages of the PDF."}, status_code=400)
 
     temp_files = []
     all_audio_data = []
+    samplerate = 22050  # default value, will be overwritten by the first reading
 
     try:
         for i, chunk in enumerate(chunk_text(cleaned_text)):
-            if not chunk.strip(): # Ignorer les morceaux vides
+            if not chunk.strip():
                 continue
-            print(f"Processing chunk {i+1}/{len(chunk_text(cleaned_text))}")
             temp_filename = f"{uuid.uuid4()}.wav"
-            temp_filepath = os.path.join(temp_dir, temp_filename)
+            temp_filepath = f"/tmp/{temp_filename}"
             try:
                 generate_audio_coqui(chunk.strip(), temp_filepath)
-                # Lire les données audio du fichier temporaire
                 audio_data, samplerate = sf.read(temp_filepath)
                 all_audio_data.append(audio_data)
                 temp_files.append(temp_filepath)
             except Exception as e:
-                print(f"Erreur lors de la génération de l'audio pour le morceau {i+1}: {e}")
-                # Optionnel : on pourrait décider de continuer ou d'arrêter ici
-                # return JSONResponse(content={"error": f"Erreur TTS sur le morceau {i+1}: {e}"}, status_code=500)
-                continue # On continue avec les autres morceaux pour l'instant
+                print(f"Error generating audio for chunk {i+1}: {e}")
+                continue
 
         if not all_audio_data:
-             return JSONResponse(content={"error": "Aucun morceau audio n'a pu être généré."}, status_code=500)
+            return JSONResponse(content={"error": "No audio piece could be generated."}, status_code=500)
 
-        # Concaténer les données audio
         final_audio_data = np.concatenate(all_audio_data)
-
-        # Sauvegarder le fichier audio final
-        # Utiliser une partie du nom original mais s'assurer qu'il est unique si nécessaire
-        output_filename = f"{os.path.splitext(file.filename)[0]}_first_5_pages.wav"
-        output_path = os.path.join(audio_dir, output_filename)
-        sf.write(output_path, final_audio_data, samplerate) # Utiliser le samplerate du dernier chunk (devrait être le même)
-
-        # Construire l'URL d'accès au fichier audio
-        audio_url = f"/static/audio/{output_filename}"
-        return JSONResponse(content={"audio_url": audio_url})
+        audio_buffer = io.BytesIO()
+        sf.write(audio_buffer, final_audio_data, samplerate, format='WAV')
+        audio_buffer.seek(0)
+        return StreamingResponse(audio_buffer, media_type="audio/wav")
 
     finally:
-        # Nettoyer les fichiers temporaires
         for temp_file in temp_files:
             try:
                 os.remove(temp_file)
                 print(f"Removed temp file: {temp_file}")
             except OSError as e:
                 print(f"Error removing temp file {temp_file}: {e}")
-        # Optionnel: supprimer le dossier temp s'il est vide
-        try:
-            if not os.listdir(temp_dir):
-                os.rmdir(temp_dir)
-        except OSError as e:
-            print(f"Error removing temp directory {temp_dir}: {e}")

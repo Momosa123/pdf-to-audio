@@ -2,7 +2,7 @@ import fitz
 
 class PDFService:
     def extract_first_page_text(self, contents: bytes) -> str:
-        """Extrait le texte de la première page d'un PDF (depuis des bytes)."""
+        """Extracts the text from the first page of a PDF (from bytes)."""
         doc = fitz.open(stream=contents, filetype="pdf")
         if len(doc) == 0:
             return ""
@@ -12,9 +12,7 @@ class PDFService:
         return text.strip()
 
     def extract_all_pages_text(self, contents: bytes) -> str:
-        """
-        Extrait le texte de toutes les pages d'un PDF (depuis des bytes).
-        """
+        """Extracts the text from all pages of a PDF (from bytes)."""
         doc = fitz.open(stream=contents, filetype="pdf")
         if len(doc) == 0:
             return ""
@@ -25,9 +23,7 @@ class PDFService:
         return "\n".join(all_text).strip()
 
     def extract_first_five_pages_text(self, contents: bytes) -> str:
-        """
-        Extrait le texte des 5 premières pages d'un PDF (depuis des bytes).
-        """
+        """Extracts the text from the first 5 pages of a PDF (from bytes)."""
         doc = fitz.open(stream=contents, filetype="pdf")
         if len(doc) == 0:
             return ""
@@ -40,10 +36,10 @@ class PDFService:
 
 def chunk_text(text, separator='\n\n'):
     """
-    Découpe le texte en morceaux basés sur un séparateur donné.
-    Par défaut, utilise deux sauts de ligne comme séparateur.
+    Chunks the text based on a given separator.
+    By default, uses two newlines as a separator.
     """
     chunks = [chunk for chunk in text.split(separator) if chunk.strip()]
-    if not chunks:  # Si le split ne donne rien, on utilise le texte entier (pour les PDF courts)
+    if not chunks:  # If the split doesn't give anything, use the whole text (for short PDFs)
         chunks = [text]
     return chunks
