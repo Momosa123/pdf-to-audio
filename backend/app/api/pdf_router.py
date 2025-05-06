@@ -1,14 +1,15 @@
-from fastapi import APIRouter, File, UploadFile
-from fastapi.responses import StreamingResponse, JSONResponse
-from app.services.extract_pdf import PDFService, chunk_text
-from app.services.tts_pdf import generate_audio_coqui
-import numpy as np
-import soundfile as sf
+import io
 import os
 import re
 import uuid
-import io
 
+import numpy as np
+import soundfile as sf
+from fastapi import APIRouter, File, UploadFile
+from fastapi.responses import JSONResponse, StreamingResponse
+
+from app.services.extract_pdf import PDFService, chunk_text
+from app.services.tts_pdf import generate_audio_coqui
 
 # Create the router
 router = APIRouter(prefix="/api", tags=["pdf"])
