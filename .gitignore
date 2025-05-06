@@ -65,7 +65,7 @@ var/
 
 # PDF
 *.pdf
-*.txt
+*.txt !backend/requirements.txt
 *.docx
 *.doc
 
