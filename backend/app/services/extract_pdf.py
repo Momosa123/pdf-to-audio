@@ -1,5 +1,6 @@
 import fitz
 
+
 class PDFService:
     def extract_first_page_text(self, contents: bytes) -> str:
         """Extracts the text from the first page of a PDF (from bytes)."""
@@ -34,12 +35,15 @@ class PDFService:
         doc.close()
         return "\n".join(all_text).strip()
 
-def chunk_text(text, separator='\n\n'):
+
+def chunk_text(text, separator="\n\n"):
     """
     Chunks the text based on a given separator.
     By default, uses two newlines as a separator.
     """
     chunks = [chunk for chunk in text.split(separator) if chunk.strip()]
-    if not chunks:  # If the split doesn't give anything, use the whole text (for short PDFs)
+    if (
+        not chunks
+    ):  # If the split doesn't give anything, use the whole text (for short PDFs)
         chunks = [text]
     return chunks
