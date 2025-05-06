@@ -4,6 +4,7 @@ from TTS.api import TTS
 model_name = "tts_models/en/ljspeech/vits"
 tts = TTS(model_name=model_name)
 
+
 def generate_audio_coqui(text: str, output_path: str):
     """
     Generates an audio file from the given text and saves it to the specified location.
