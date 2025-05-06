@@ -1,8 +1,9 @@
-from app.api import pdf_router
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+
+from app.api import pdf_router
 
 load_dotenv()
 
