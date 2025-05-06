@@ -3,7 +3,8 @@ line-length = 88
 # Cible la version de Python utilisée dans ton projet
 # (modifie si besoin)
 target-version = "py311"
-# E: pycodestyle (style), F: pyflakes (erreurs), I: isort (tri imports)
+
+[tool.ruff.lint]
 select = ["E", "F", "I"]
 ignore = []
 
