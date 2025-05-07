@@ -6,7 +6,6 @@ from fastapi.staticfiles import StaticFiles
 from app.api import pdf_router
 
 load_dotenv()
-
 app = FastAPI(title="PDF to Audio API")
 
 # CORS Middleware
