@@ -59,7 +59,7 @@ async def pdf_to_audio(file: UploadFile = File(...)):
                 all_audio_data.append(audio_data)
                 temp_files.append(temp_filepath)
             except Exception as e:
-                print(f"Error generating audio for chunk {i+1}: {e}")
+                print(f"Error generating audio for chunk {i + 1}: {e}")
                 continue
 
         if not all_audio_data:
