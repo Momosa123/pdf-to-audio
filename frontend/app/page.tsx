@@ -1,24 +1,22 @@
 "use client";
-
 import { useState } from "react";
-import UploadInput from "@/components/UploadInput";
-import PDFThumbnailCard from "@/components/PDFThumbnailCard";
-import PDFPreview from "@/components/PDFPreview";
 import { pdfjs } from "react-pdf";
+
+import PDFPreview from "@/components/PDFPreview";
+import PDFThumbnailCard from "@/components/PDFThumbnailCard";
+import UploadInput from "@/components/UploadInput";
 
 // configure the worker for react-pdf
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
-  import.meta.url
+  import.meta.url,
 ).toString();
 
 export default function Home() {
   const [isUploading, setIsUploading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewFile, setPreviewFile] = useState<File | null>(null);
-  const [audioUrls, setAudioUrls] = useState<{ [filename: string]: string }>(
-    {}
-  );
+  const [audioUrls, setAudioUrls] = useState<{ [filename: string]: string }>({});
 
   // Takes the file to cancel as an argument
   const handleCancel = (fileToRemove: File) => {
@@ -46,9 +44,7 @@ export default function Home() {
       }));
     } catch (error) {
       console.error("Erreur:", error);
-      alert(
-        `Erreur lors de l'upload de ${fileToUpload.name}. Veuillez réessayer.`
-      );
+      alert(`Erreur lors de l'upload de ${fileToUpload.name}. Veuillez réessayer.`);
     } finally {
       setIsUploading(false);
     }

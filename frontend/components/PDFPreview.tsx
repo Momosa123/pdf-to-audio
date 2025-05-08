@@ -1,12 +1,13 @@
+import { ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
+import { useState } from "react";
+import { Document, Page } from "react-pdf";
+
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Document, Page } from "react-pdf";
-import { useState } from "react";
-import { Loader2, ChevronLeft, ChevronRight, X } from "lucide-react";
+} from "@/components/ui/Dialog";
 
 interface PDFPreviewProps {
   file: File;
@@ -24,8 +25,7 @@ const PDFPreview = ({ file, isOpen, onClose }: PDFPreviewProps) => {
   };
 
   const goToPrevPage = () => setPageNumber((prev) => Math.max(prev - 1, 1));
-  const goToNextPage = () =>
-    setPageNumber((prev) => Math.min(prev + 1, numPages));
+  const goToNextPage = () => setPageNumber((prev) => Math.min(prev + 1, numPages));
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

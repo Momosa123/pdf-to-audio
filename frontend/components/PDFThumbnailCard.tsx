@@ -1,7 +1,8 @@
+import { Check, Eye, Loader2, X } from "lucide-react";
 import React from "react";
 import { Document, Page } from "react-pdf";
-import { Button } from "@/components/ui/button";
-import { X, Check, Loader2, Eye } from "lucide-react";
+
+import { Button } from "@/components/ui/Button";
 
 // Ensure the worker is configured (maybe in a global or layout file)
 // pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`; // Or according to your config
@@ -54,9 +55,7 @@ const PDFThumbnailCard = ({
             file={file}
             onLoadSuccess={() => setThumbLoading(false)}
             loading="" // Disable default loader
-            error={
-              <div className="p-2 text-xs text-red-500">Erreur chargement</div>
-            }
+            error={<div className="p-2 text-xs text-red-500">Erreur chargement</div>}
           >
             <Page
               pageNumber={1}
