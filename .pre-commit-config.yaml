@@ -16,7 +16,7 @@ repos:
       - id: eslint
         name: eslint (frontend)
         files: \.(js|jsx|ts|tsx)$
-        args: ["--config", "frontend/.eslintrc.js"]
+        args: ["--config", "frontend/eslint.config.mjs", "--fix"]
 
   # --- Prettier Hook for Frontend ---
   - repo: https://github.com/pre-commit/mirrors-prettier
