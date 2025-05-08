@@ -1,9 +1,8 @@
 [tool.ruff]
 line-length = 88
-# Cible la version de Python utilisée dans ton projet
-# (modifie si besoin)
+
 target-version = "py311"
-src = ["backend"]  
+
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
