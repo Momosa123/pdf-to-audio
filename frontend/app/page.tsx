@@ -1,9 +1,9 @@
 "use client";
+import PDFPreview from "@/components/PDFPreview";
 
 import { useState } from "react";
 import UploadInput from "@/components/UploadInput";
 import PDFThumbnailCard from "@/components/PDFThumbnailCard";
-import PDFPreview from "@/components/PDFPreview";
 import { pdfjs } from "react-pdf";
 
 // configure the worker for react-pdf
