@@ -24,8 +24,7 @@ const PDFPreview = ({ file, isOpen, onClose }: PDFPreviewProps) => {
   };
 
   const goToPrevPage = () => setPageNumber((prev) => Math.max(prev - 1, 1));
-  const goToNextPage = () =>
-    setPageNumber((prev) => Math.min(prev + 1, numPages));
+  const goToNextPage = () => setPageNumber((prev) => Math.min(prev + 1, numPages));
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

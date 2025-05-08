@@ -54,9 +54,7 @@ const PDFThumbnailCard = ({
             file={file}
             onLoadSuccess={() => setThumbLoading(false)}
             loading="" // Disable default loader
-            error={
-              <div className="p-2 text-xs text-red-500">Erreur chargement</div>
-            }
+            error={<div className="p-2 text-xs text-red-500">Erreur chargement</div>}
           >
             <Page
               pageNumber={1}

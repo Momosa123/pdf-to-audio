@@ -5,10 +5,7 @@ interface UploadInputProps {
   onFilesChange?: (files: File[]) => void;
 }
 
-export default function UploadInput({
-  files,
-  onFilesChange,
-}: UploadInputProps) {
+export default function UploadInput({ files, onFilesChange }: UploadInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -16,7 +13,7 @@ export default function UploadInput({
     const newFiles = Array.from(e.target.files);
     const allFiles = [...files, ...newFiles];
     const uniqueFiles = Array.from(
-      new Map(allFiles.map((f) => [f.name + f.size, f])).values()
+      new Map(allFiles.map((f) => [f.name + f.size, f])).values(),
     );
     onFilesChange?.(uniqueFiles);
     e.target.value = "";
