@@ -5,6 +5,7 @@ import { pdfjs } from "react-pdf";
 import PDFPreview from "@/components/PDFPreview";
 import PDFThumbnailCard from "@/components/PDFThumbnailCard";
 import UploadInput from "@/components/UploadInput";
+import { convertPdfToAudio } from "@/lib/api";
 
 // configure the worker for react-pdf
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -17,7 +18,6 @@ export default function Home() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewFile, setPreviewFile] = useState<File | null>(null);
   const [audioUrls, setAudioUrls] = useState<{ [filename: string]: string }>({});
-
   // Takes the file to cancel as an argument
   const handleCancel = (fileToRemove: File) => {
     setSelectedFiles((prev) => prev.filter((f) => f !== fileToRemove));
@@ -27,16 +27,7 @@ export default function Home() {
   const handleConfirm = async (fileToUpload: File) => {
     setIsUploading(true);
     try {
-      const formData = new FormData();
-      formData.append("file", fileToUpload);
-      const response = await fetch("http://127.0.0.1:8000/api/pdf-to-audio", {
-        method: "POST",
-        body: formData,
-      });
-      if (!response.ok) {
-        throw new Error(`Erreur lors de l'upload de ${fileToUpload.name}`);
-      }
-      const audioBlob = await response.blob();
+      const audioBlob = await convertPdfToAudio(fileToUpload);
       const url = URL.createObjectURL(audioBlob);
       setAudioUrls((prev) => ({
         ...prev,
