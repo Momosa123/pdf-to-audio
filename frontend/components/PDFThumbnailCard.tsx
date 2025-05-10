@@ -1,11 +1,19 @@
-import { Check, Eye, Loader2, X } from "lucide-react";
+import { AlertTriangle, Check, Eye, Loader2, X } from "lucide-react";
 import React from "react";
 import { Document, Page } from "react-pdf";
 
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 
 // Ensure the worker is configured (maybe in a global or layout file)
 // pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`; // Or according to your config
+
+// Définition du type pour processingStatus, idéalement importé ou partagé
+export type ProcessingStatus =
+  | "idle"
+  | "uploading"
+  | "processing"
+  | "success"
+  | "error";
 
 interface PDFThumbnailCardProps {
   file: File;
@@ -13,7 +21,9 @@ interface PDFThumbnailCardProps {
   onConfirm: () => void;
   onCancel: () => void;
   onThumbnailClick: () => void;
-  isUploading: boolean;
+  isUploading: boolean; // Peut être dérivé de processingStatus mais gardé pour compatibilité ou clarté
+  processingStatus?: ProcessingStatus; // Statut détaillé du traitement
+  errorMessage?: string; // Message d'erreur
 }
 
 const PDFThumbnailCard = ({
@@ -22,10 +32,33 @@ const PDFThumbnailCard = ({
   onConfirm,
   onCancel,
   onThumbnailClick,
-  isUploading,
+  isUploading, // Conserver pour la logique existante ou dériver de processingStatus
+  processingStatus = "idle", // Valeur par défaut
+  errorMessage,
 }: PDFThumbnailCardProps) => {
   const [thumbLoading, setThumbLoading] = React.useState(true);
   const [showPlayer, setShowPlayer] = React.useState(false);
+
+  // Déterminer le texte et l'icône du bouton en fonction du statut
+  let buttonText = "Generate audio";
+  let ButtonIcon = Check;
+  let buttonDisabled = isUploading; // isUploading peut être true pour uploading ou processing
+
+  if (processingStatus === "uploading") {
+    buttonText = "Uploading...";
+    ButtonIcon = Loader2;
+    buttonDisabled = true;
+  } else if (processingStatus === "processing") {
+    buttonText = "Processing...";
+    ButtonIcon = Loader2;
+    buttonDisabled = true;
+  } else if (processingStatus === "error") {
+    buttonText = "Error";
+    ButtonIcon = AlertTriangle;
+    buttonDisabled = false; // Permettre de réessayer ? Ou afficher un message permanent ? Pour l'instant, non désactivé.
+  } else if (processingStatus === "success") {
+    // En cas de succès, le bouton de génération n'est plus affiché, on montre le lecteur ou le bouton "Listen"
+  }
 
   return (
     <div className="w-full p-4 bg-white border border-gray-200 rounded-lg shadow-md flex flex-col items-center gap-4">
@@ -34,7 +67,7 @@ const PDFThumbnailCard = ({
         <button
           className="absolute top-1 right-1 z-10 bg-white rounded-full p-1 shadow-sm hover:bg-gray-100"
           onClick={onCancel}
-          disabled={isUploading}
+          disabled={buttonDisabled} // Utiliser buttonDisabled
           aria-label="Supprimer"
         >
           <X className="cursor-pointer w-4 h-4 text-gray-600" />
@@ -55,7 +88,11 @@ const PDFThumbnailCard = ({
             file={file}
             onLoadSuccess={() => setThumbLoading(false)}
             loading="" // Disable default loader
-            error={<div className="p-2 text-xs text-red-500">Erreur chargement</div>}
+            error={
+              <div className="p-2 text-xs text-red-500">
+                Erreur chargement miniature
+              </div>
+            }
           >
             <Page
               pageNumber={1}
@@ -64,9 +101,11 @@ const PDFThumbnailCard = ({
               renderAnnotationLayer={false}
             />
           </Document>
-          <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 flex items-center justify-center transition-opacity opacity-0 hover:opacity-100">
-            <Eye className="w-8 h-8 text-white" />
-          </div>
+          {!audioUrl && (
+            <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-30 flex items-center justify-center transition-opacity opacity-0 hover:opacity-100">
+              <Eye className="w-8 h-8 text-white" />
+            </div>
+          )}
         </div>
       </div>
 
@@ -75,34 +114,47 @@ const PDFThumbnailCard = ({
         {file.name}
       </p>
 
-      {/* Audio player or generation/listen button */}
-      {audioUrl ? (
-        showPlayer ? (
-          <audio src={audioUrl} controls autoPlay className="w-36" />
-        ) : (
+      {/* Affichage du message d'erreur si présent */}
+      {processingStatus === "error" && errorMessage && (
+        <p className="text-xs text-red-500 text-center px-2">{errorMessage}</p>
+      )}
+
+      {/* Bouton d'action ou lecteur audio */}
+      {
+        processingStatus === "success" && audioUrl ? (
+          showPlayer ? (
+            <audio src={audioUrl} controls autoPlay className="w-36" />
+          ) : (
+            <Button
+              size="sm"
+              className="bg-green-600 cursor-pointer hover:bg-green-700 text-white flex items-center gap-1"
+              onClick={() => setShowPlayer(true)}
+            >
+              ▶️ Listen
+            </Button>
+          )
+        ) : processingStatus !== "success" ? ( // Affiche le bouton de génération/statut si pas encore de succès
           <Button
             size="sm"
-            className="bg-green-600 cursor-pointer hover:bg-green-700 text-white flex items-center gap-1"
-            onClick={() => setShowPlayer(true)}
+            className={`${
+              processingStatus === "error"
+                ? "bg-red-500 hover:bg-red-600"
+                : "bg-blue-600 hover:bg-blue-700"
+            } text-white flex items-center gap-1`}
+            onClick={processingStatus === "error" ? onConfirm : onConfirm} // Permet de relancer en cas d'erreur
+            disabled={buttonDisabled}
           >
-            ▶️ Listen
+            <ButtonIcon
+              className={`w-4 h-4 ${
+                (processingStatus === "uploading" ||
+                  processingStatus === "processing") &&
+                "animate-spin"
+              }`}
+            />
+            {buttonText}
           </Button>
-        )
-      ) : (
-        <Button
-          size="sm"
-          className="bg-blue-600 cursor-pointer hover:bg-blue-700 text-white flex items-center gap-1"
-          onClick={onConfirm}
-          disabled={isUploading}
-        >
-          {isUploading ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Check className="w-4 h-4" />
-          )}
-          {isUploading ? "Generating..." : "Generate audio"}
-        </Button>
-      )}
+        ) : null /* Ne rien afficher si success mais pas d'audioUrl (cas improbable) */
+      }
     </div>
   );
 };
