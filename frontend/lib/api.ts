@@ -1,9 +1,6 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+import { SubmitTaskResponse, TaskStatusResponse } from "@/types/pdf";
 
-export interface SubmitTaskResponse {
-  task_id: string;
-  message: string;
-}
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
 export async function submitPdfTask(file: File): Promise<SubmitTaskResponse> {
   const formData = new FormData();
@@ -22,13 +19,6 @@ export async function submitPdfTask(file: File): Promise<SubmitTaskResponse> {
     );
   }
   return response.json();
-}
-
-export interface TaskStatusResponse {
-  task_id: string;
-  status: "PENDING" | "STARTED" | "SUCCESS" | "FAILURE" | "RETRY" | "REVOKED";
-  result?: string | null; // Chemin de l'URL de l'audio si SUCCESS
-  error_info?: string | null; // Info sur l'erreur si FAILURE
 }
 
 export async function getTaskStatus(taskId: string): Promise<TaskStatusResponse> {
