@@ -21,7 +21,6 @@ interface PDFThumbnailCardProps {
   onConfirm: () => void;
   onCancel: () => void;
   onThumbnailClick: () => void;
-  isUploading: boolean; // Peut être dérivé de processingStatus mais gardé pour compatibilité ou clarté
   processingStatus?: ProcessingStatus; // Statut détaillé du traitement
   errorMessage?: string; // Message d'erreur
 }
@@ -32,7 +31,6 @@ const PDFThumbnailCard = ({
   onConfirm,
   onCancel,
   onThumbnailClick,
-  isUploading, // Conserver pour la logique existante ou dériver de processingStatus
   processingStatus = "idle", // Valeur par défaut
   errorMessage,
 }: PDFThumbnailCardProps) => {
@@ -42,22 +40,33 @@ const PDFThumbnailCard = ({
   // Déterminer le texte et l'icône du bouton en fonction du statut
   let buttonText = "Generate audio";
   let ButtonIcon = Check;
-  let buttonDisabled = isUploading; // isUploading peut être true pour uploading ou processing
+  let buttonDisabled = false;
 
-  if (processingStatus === "uploading") {
-    buttonText = "Uploading...";
-    ButtonIcon = Loader2;
-    buttonDisabled = true;
-  } else if (processingStatus === "processing") {
-    buttonText = "Processing...";
-    ButtonIcon = Loader2;
-    buttonDisabled = true;
-  } else if (processingStatus === "error") {
-    buttonText = "Error";
-    ButtonIcon = AlertTriangle;
-    buttonDisabled = false; // Permettre de réessayer ? Ou afficher un message permanent ? Pour l'instant, non désactivé.
-  } else if (processingStatus === "success") {
-    // En cas de succès, le bouton de génération n'est plus affiché, on montre le lecteur ou le bouton "Listen"
+  switch (processingStatus) {
+    case "uploading":
+      buttonText = "Uploading...";
+      ButtonIcon = Loader2;
+      buttonDisabled = true;
+      break;
+    case "processing":
+      buttonText = "Processing...";
+      ButtonIcon = Loader2;
+      buttonDisabled = true;
+      break;
+    case "error":
+      buttonText = "Retry";
+      ButtonIcon = AlertTriangle;
+      buttonDisabled = false;
+      break;
+    case "success":
+      buttonText = "Listen";
+      ButtonIcon = Check;
+      buttonDisabled = false;
+      break;
+    default:
+      buttonText = "Generate audio";
+      ButtonIcon = Check;
+      buttonDisabled = false;
   }
 
   return (
@@ -67,7 +76,9 @@ const PDFThumbnailCard = ({
         <button
           className="absolute top-1 right-1 z-10 bg-white rounded-full p-1 shadow-sm hover:bg-gray-100"
           onClick={onCancel}
-          disabled={buttonDisabled} // Utiliser buttonDisabled
+          disabled={
+            processingStatus === "uploading" || processingStatus === "processing"
+          }
           aria-label="Supprimer"
         >
           <X className="cursor-pointer w-4 h-4 text-gray-600" />
@@ -120,41 +131,38 @@ const PDFThumbnailCard = ({
       )}
 
       {/* Bouton d'action ou lecteur audio */}
-      {
-        processingStatus === "success" && audioUrl ? (
-          showPlayer ? (
-            <audio src={audioUrl} controls autoPlay className="w-36" />
-          ) : (
-            <Button
-              size="sm"
-              className="bg-green-600 cursor-pointer hover:bg-green-700 text-white flex items-center gap-1"
-              onClick={() => setShowPlayer(true)}
-            >
-              ▶️ Listen
-            </Button>
-          )
-        ) : processingStatus !== "success" ? ( // Affiche le bouton de génération/statut si pas encore de succès
+      {processingStatus === "success" && audioUrl ? (
+        showPlayer ? (
+          <audio src={audioUrl} controls autoPlay className="w-36" />
+        ) : (
           <Button
             size="sm"
-            className={`${
-              processingStatus === "error"
-                ? "bg-red-500 hover:bg-red-600"
-                : "bg-blue-600 hover:bg-blue-700"
-            } text-white flex items-center gap-1`}
-            onClick={processingStatus === "error" ? onConfirm : onConfirm} // Permet de relancer en cas d'erreur
-            disabled={buttonDisabled}
+            className="bg-green-600 cursor-pointer hover:bg-green-700 text-white flex items-center gap-1"
+            onClick={() => setShowPlayer(true)}
           >
-            <ButtonIcon
-              className={`w-4 h-4 ${
-                (processingStatus === "uploading" ||
-                  processingStatus === "processing") &&
-                "animate-spin"
-              }`}
-            />
-            {buttonText}
+            ▶️ Listen
           </Button>
-        ) : null /* Ne rien afficher si success mais pas d'audioUrl (cas improbable) */
-      }
+        )
+      ) : (
+        <Button
+          size="sm"
+          className={`${
+            processingStatus === "error"
+              ? "bg-red-500 hover:bg-red-600"
+              : "bg-blue-600 hover:bg-blue-700"
+          } text-white flex items-center gap-1`}
+          onClick={onConfirm}
+          disabled={buttonDisabled}
+        >
+          <ButtonIcon
+            className={`w-4 h-4 ${
+              (processingStatus === "uploading" || processingStatus === "processing") &&
+              "animate-spin"
+            }`}
+          />
+          {buttonText}
+        </Button>
+      )}
     </div>
   );
 };
