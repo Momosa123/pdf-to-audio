@@ -1,82 +1,71 @@
-import io
 import os
-import re
-import uuid
 
-import numpy as np
-import soundfile as sf
-from fastapi import APIRouter, File, UploadFile
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi import APIRouter, File, HTTPException, UploadFile
 
-from app.services.extract_pdf import PDFService, chunk_text
-from app.services.tts_pdf import generate_audio_coqui
+from ..celery_app import celery_app  # Import de l'instance Celery
+from ..services.tts_task import pdf_to_audio_task  # Import de la tâche Celery
 
-# Create the router
+# Créer le router
 router = APIRouter(prefix="/api", tags=["pdf"])
 
-
-def clean_text(text):
-    # Removes ONLY SINGLE spaces between consecutive uppercase letters
-    # Note: we replace \s+ by a single space ' ' in the regex
-    cleaned_text = re.sub(r"(?<=[A-Z]) (?=[A-Z])", "", text)
-    # Removes remaining multiple spaces (which could be word separators)
-    # and replaces them with a standard single space.
-    cleaned_text = re.sub(r"\s{2,}", " ", cleaned_text)
-    print(f"Original text: '{text}'")
-    print(f"Cleaned text  : '{cleaned_text.strip()}'")
-    return cleaned_text.strip()
+# Définir le répertoire de sortie pour les fichiers audio
+# Ce chemin est relatif à la racine du projet si le worker est lancé depuis là,
+# ou à l'endroit d'où le worker est lancé.
+# Assurons-nous qu'il correspond à ce qui sera servi statiquement par FastAPI.
+AUDIO_OUTPUT_DIR = os.path.join("app", "static", "audio")
 
 
-@router.post("/pdf-to-audio")
-async def pdf_to_audio(file: UploadFile = File(...)):
+@router.post("/submit_pdf_to_audio_task")
+async def submit_pdf_to_audio_task(file: UploadFile = File(...)):
     """
-    Converts the first 5 pages of a PDF file to audio and returns the audio directly.
+    Soumet un fichier PDF pour conversion en audio.
+    La conversion est effectuée en arrière-plan via Celery.
+    Retourne un ID de tâche pour suivre la progression.
     """
     contents = await file.read()
-    pdf_service = PDFService()
-    text = pdf_service.extract_first_five_pages_text(contents)
-    cleaned_text = clean_text(text)
+    if not contents:
+        raise HTTPException(status_code=400, detail="Le fichier PDF est vide.")
 
-    if not cleaned_text:
-        return JSONResponse(
-            content={"error": "No text found in the first 5 pages of the PDF."},
-            status_code=400,
-        )
+    # Lancer la tâche Celery
+    # La tâche `pdf_to_audio_task` prend (pdf_bytes, output_dir)
+    task = pdf_to_audio_task.delay(contents, AUDIO_OUTPUT_DIR)
 
-    temp_files = []
-    all_audio_data = []
-    samplerate = 22050  # default value, will be overwritten by the first reading
+    return {
+        "task_id": task.id,
+        "message": "La conversion du PDF en audio a été démarrée.",
+    }
 
-    try:
-        for i, chunk in enumerate(chunk_text(cleaned_text)):
-            if not chunk.strip():
-                continue
-            temp_filename = f"{uuid.uuid4()}.wav"
-            temp_filepath = f"/tmp/{temp_filename}"
-            try:
-                generate_audio_coqui(chunk.strip(), temp_filepath)
-                audio_data, samplerate = sf.read(temp_filepath)
-                all_audio_data.append(audio_data)
-                temp_files.append(temp_filepath)
-            except Exception as e:
-                print(f"Error generating audio for chunk {i + 1}: {e}")
-                continue
 
-        if not all_audio_data:
-            return JSONResponse(
-                content={"error": "No audio piece could be generated."}, status_code=500
+@router.get("/task-status/{task_id}")
+async def get_task_status(task_id: str):
+    """
+    Récupère le statut et le résultat d'une tâche Celery.
+    """
+    task_result = celery_app.AsyncResult(task_id)
+
+    response = {
+        "task_id": task_id,
+        "status": task_result.status,
+        "result": None,
+        "error_info": None,
+    }
+
+    if task_result.successful():
+        # Le résultat de la tâche est le chemin du fichier audio
+        # ex: "app/static/audio/nom_fichier.wav"
+        # Nous le transformons en URL relative que le client peut utiliser
+        # en supposant que "app/static" est monté à "/static"
+        raw_path = task_result.result
+        if isinstance(raw_path, str) and raw_path.startswith("app/static/"):
+            response["result"] = raw_path.replace("app/static/", "/static/", 1)
+        else:
+            response["result"] = (
+                raw_path  # Retourne le chemin brut si le format est inattendu
             )
 
-        final_audio_data = np.concatenate(all_audio_data)
-        audio_buffer = io.BytesIO()
-        sf.write(audio_buffer, final_audio_data, samplerate, format="WAV")
-        audio_buffer.seek(0)
-        return StreamingResponse(audio_buffer, media_type="audio/wav")
+    elif task_result.failed():
+        response["error_info"] = str(
+            task_result.info
+        )  # task_result.info contient l'exception
 
-    finally:
-        for temp_file in temp_files:
-            try:
-                os.remove(temp_file)
-                print(f"Removed temp file: {temp_file}")
-            except OSError as e:
-                print(f"Error removing temp file {temp_file}: {e}")
+    return response

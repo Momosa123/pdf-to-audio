@@ -19,7 +19,7 @@ app.add_middleware(
 )
 
 # Mount the static folder to serve audio files
-app.mount("/app/static", StaticFiles(directory="app/static"), name="static")
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 # Include the PDF routes
 app.include_router(pdf_router.router)
 
