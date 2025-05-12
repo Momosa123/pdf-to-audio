@@ -28,65 +28,93 @@ export default function Home() {
     Record<string, NodeJS.Timeout>
   >({});
 
-  const updateFileState = (
-    fileName: string,
-    newState: Partial<FileProcessingState>,
-  ) => {
-    setFileStates((prev) => ({
-      ...prev,
-      [fileName]: {
-        ...(prev[fileName] || { status: "idle" }),
-        ...newState,
-      },
-    }));
-  };
+  const updateFileState = useCallback(
+    (fileName: string, newState: Partial<FileProcessingState>) => {
+      setFileStates((prev) => ({
+        ...prev,
+        [fileName]: {
+          ...(prev[fileName] || { status: "idle" }),
+          ...newState,
+        },
+      }));
+    },
+    [], // setFileStates is stable
+  );
 
   const pollTaskStatus = useCallback(
     async (taskId: string, fileName: string) => {
+      // Helper to clear interval using functional update
+      const stopAndRemoveInterval = () => {
+        setTaskPollIntervals((prevIntervals) => {
+          const intervalIdToClear = prevIntervals[taskId];
+          if (intervalIdToClear) {
+            clearInterval(intervalIdToClear);
+            console.log(
+              `Polling definitively stopped for task ${taskId} (via functional update)`,
+            );
+            // Create a new object for the state update
+            const newIntervals = { ...prevIntervals };
+            delete newIntervals[taskId];
+            return newIntervals;
+          }
+          // If the intervalId was not found, return the previous state unchanged
+          return prevIntervals;
+        });
+      };
+
+      // Initial check using fileStates from closure.
+      // This fileStates is as "fresh" as this instance of pollTaskStatus.
+      // If file is already marked success/error locally, try to stop.
+      const currentFileLocalState = fileStates[fileName];
+      if (
+        currentFileLocalState &&
+        (currentFileLocalState.status === "success" ||
+          currentFileLocalState.status === "error")
+      ) {
+        console.log(
+          `Task ${taskId} for file ${fileName} already completed locally with status: ${currentFileLocalState.status}. Attempting to stop poll.`,
+        );
+        stopAndRemoveInterval();
+        return;
+      }
+
       try {
         const statusResponse = await getTaskStatus(taskId);
-        // updateFileState(fileName, {
-        //   status: "processing", // Cette ligne est redondante si la tâche est déjà terminale
-        //   taskId: statusResponse.task_id, // taskId est déjà connu
-        // });
+        console.log(
+          "Status Response from backend:",
+          statusResponse,
+          "for file:",
+          fileName,
+          "Task ID:",
+          taskId,
+        );
 
         if (statusResponse.status === "SUCCESS") {
-          if (taskPollIntervals[taskId]) {
-            clearInterval(taskPollIntervals[taskId]);
-            setTaskPollIntervals((prev) => {
-              const newIntervals = { ...prev };
-              delete newIntervals[taskId];
-              return newIntervals;
-            });
-          }
+          console.log(`Task ${taskId} SUCCESS from API. Stopping poll.`);
+          stopAndRemoveInterval();
           const audioPath = statusResponse.result;
-          // API_BASE_URL est maintenant géré dans api.ts, donc pas besoin de le référencer ici directement
-          // si les URLs retournées par le backend sont complètes ou si api.ts les construit.
-          // Pour l'instant, on suppose que statusResponse.result est soit une URL complète, soit une URL relative qui sera préfixée dans api.ts ou est déjà complète.
-          // Si le backend retourne /static/audio/file.wav, il faut le préfixer. La logique actuelle dans api.ts ne préfixe pas.
-          // La logique de préfixage était dans page.tsx, il faut s'assurer qu'elle est correcte.
-          // Pour l'instant, je vais la garder ici, mais elle devrait idéalement être gérée de manière centralisée.
           const NEXT_PUBLIC_API_URL_LOCAL =
             process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
           const finalAudioUrl =
             audioPath && !audioPath.startsWith("http")
-              ? `${NEXT_PUBLIC_API_URL_LOCAL}${audioPath}` // Utilise la variable locale pour le préfixe
+              ? `${NEXT_PUBLIC_API_URL_LOCAL}${audioPath}`
               : audioPath;
+          console.log("Constructed finalAudioUrl:", finalAudioUrl);
 
           updateFileState(fileName, {
             status: "success",
             audioUrl: finalAudioUrl || undefined,
             taskId: statusResponse.task_id,
           });
+          console.log(
+            "File state updated to success for:",
+            fileName,
+            "with URL:",
+            finalAudioUrl,
+          );
         } else if (statusResponse.status === "FAILURE") {
-          if (taskPollIntervals[taskId]) {
-            clearInterval(taskPollIntervals[taskId]);
-            setTaskPollIntervals((prev) => {
-              const newIntervals = { ...prev };
-              delete newIntervals[taskId];
-              return newIntervals;
-            });
-          }
+          console.log(`Task ${taskId} FAILURE from API. Stopping poll.`);
+          stopAndRemoveInterval();
           updateFileState(fileName, {
             status: "error",
             errorMessage: statusResponse.error_info || "La tâche a échoué.",
@@ -97,20 +125,17 @@ export default function Home() {
           statusResponse.status === "STARTED" ||
           statusResponse.status === "RETRY"
         ) {
+          // Task is still processing, update state but continue polling
           updateFileState(fileName, {
-            // Mettre à jour le statut en processing si la tâche n'est pas encore terminée
             status: "processing",
             taskId: statusResponse.task_id,
           });
         } else {
-          if (taskPollIntervals[taskId]) {
-            clearInterval(taskPollIntervals[taskId]);
-            setTaskPollIntervals((prev) => {
-              const newIntervals = { ...prev };
-              delete newIntervals[taskId];
-              return newIntervals;
-            });
-          }
+          // Unexpected status
+          console.log(
+            `Task ${taskId} UNEXPECTED status from API (${statusResponse.status}). Stopping poll.`,
+          );
+          stopAndRemoveInterval();
           updateFileState(fileName, {
             status: "error",
             errorMessage: `État de tâche inattendu: ${statusResponse.status}`,
@@ -118,24 +143,17 @@ export default function Home() {
           });
         }
       } catch (error) {
-        console.error("Erreur de polling:", error);
-        if (taskPollIntervals[taskId]) {
-          clearInterval(taskPollIntervals[taskId]);
-          setTaskPollIntervals((prev) => {
-            const newIntervals = { ...prev };
-            delete newIntervals[taskId];
-            return newIntervals;
-          });
-        }
+        console.error(`Polling error for task ${taskId} on file ${fileName}:`, error);
+        stopAndRemoveInterval(); // Stop polling on any error during API call
         const existingState = fileStates[fileName];
         updateFileState(fileName, {
           status: "error",
           errorMessage: error instanceof Error ? error.message : "Erreur de polling.",
-          taskId: existingState?.taskId || taskId,
+          taskId: existingState?.taskId || taskId, // Preserve existing taskId if available
         });
       }
     },
-    [taskPollIntervals, fileStates],
+    [fileStates, updateFileState], // updateFileState is a dependency
   );
 
   useEffect(() => {
@@ -170,11 +188,10 @@ export default function Home() {
       errorMessage: undefined,
     });
     try {
-      // submitPdfTask est maintenant importé
       const submitResponse = await submitPdfTask(fileToUpload);
       updateFileState(fileToUpload.name, {
         status: "processing",
-        taskId: submitResponse.task_id, // Utilise task_id de la réponse
+        taskId: submitResponse.task_id,
       });
 
       const intervalId = setInterval(() => {
@@ -235,10 +252,8 @@ export default function Home() {
                     ? currentFileState.audioUrl || null
                     : null
                 }
-                isUploading={
-                  currentFileState.status === "uploading" ||
-                  currentFileState.status === "processing"
-                }
+                processingStatus={currentFileState.status}
+                errorMessage={currentFileState.errorMessage}
                 onConfirm={() => handleConfirm(file)}
                 onCancel={() => handleCancel(file)}
                 onThumbnailClick={() => handleThumbnailClick(file)}
