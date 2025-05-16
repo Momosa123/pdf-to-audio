@@ -8,13 +8,13 @@ from app.libs.utils import clean_text
 
 from ..celery_app import celery_app
 from .extract_pdf import PDFService, chunk_text
-from .tts_pdf import generate_audio_coqui
+from .openai_tts import generate_audio_openai
 
 
 @celery_app.task
 def pdf_to_audio_task(pdf_bytes: bytes, output_dir: str):
     """
-    Extract text from PDF and generate audio using Coqui TTS.
+    Extract text from PDF and generate audio using OpenAI TTS.
     Saves the audio file to output_dir and returns its path.
 
     Args:
@@ -39,7 +39,7 @@ def pdf_to_audio_task(pdf_bytes: bytes, output_dir: str):
             temp_filename = f"{uuid.uuid4()}.wav"
             temp_filepath = os.path.join("/tmp", temp_filename)
             try:
-                generate_audio_coqui(chunk.strip(), temp_filepath)
+                generate_audio_openai(chunk.strip(), temp_filepath)
                 audio_data, samplerate_read = sf.read(temp_filepath)
                 if audio_data.size > 0:
                     all_audio_data.append(audio_data)
