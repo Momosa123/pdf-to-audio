@@ -72,7 +72,7 @@ export default function usePdfTasks() {
           stopAndRemoveInterval();
           const audioPath = statusResponse.result;
           const NEXT_PUBLIC_API_URL_LOCAL =
-            process.env.NEX_PUBLIC_API_URL || "http://127.00.1.8000";
+            process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
           const finalAudioUrl =
             audioPath && !audioPath.startsWith("http")
               ? `${NEXT_PUBLIC_API_URL_LOCAL}${audioPath}`
