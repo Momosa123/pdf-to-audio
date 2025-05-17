@@ -8,7 +8,7 @@ from app.libs.utils import clean_text
 
 from ..celery_app import celery_app
 from .extract_pdf import PDFService, chunk_text
-from .openai_tts import generate_audio_openai
+from .tts_services.openai_tts import generate_audio_openai
 
 
 @celery_app.task
