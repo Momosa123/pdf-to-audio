@@ -5,10 +5,10 @@ import numpy as np
 import soundfile as sf
 
 from app.libs.utils import clean_text
+from app.services.tts_services.google_tts import generate_audio_google
 
 from ..celery_app import celery_app
 from .extract_pdf import PDFService, chunk_text
-from .tts_services.openai_tts import generate_audio_openai
 
 
 @celery_app.task
@@ -39,7 +39,7 @@ def pdf_to_audio_task(pdf_bytes: bytes, output_dir: str):
             temp_filename = f"{uuid.uuid4()}.wav"
             temp_filepath = os.path.join("/tmp", temp_filename)
             try:
-                generate_audio_openai(chunk.strip(), temp_filepath)
+                generate_audio_google(chunk.strip(), temp_filepath)
                 audio_data, samplerate_read = sf.read(temp_filepath)
                 if audio_data.size > 0:
                     all_audio_data.append(audio_data)
